@@ -60,3 +60,48 @@ docker container ls
 - The -ai flag is similar to the -it flag.
 - docker pull <image>: pulls an image from the remote image repo. 
  
+## Lesson 27: Docker Networks
+- Each container is by default connected to a private network called "bridge".
+- All containers on a network can talk to each other without publishing their ports.
+- Best practice is to create a new network for each app.
+- Network defaults work well, but are easily configurable.
+- Containers can be in 0 to several networks.
+- Only one container can listen to a host port at a time.
+- Any traffic from the outside of the host that goes to the port mapped by the container will arrive to the container.
+
+## Lesson 28: Docker Networks CLI Management
+- docker network ls: lists networks
+- docker network inspect <network>: details of the config of a network, like the containers connected.
+- docker network create --driver <network>: creates a new network with the possibility to using a different driver with the flag.
+- docker network connect <network> <container>: Attach a network to a container
+- docker network disconnect <network> <container>: Detach a network from container
+- By default, there are 3 networks: bridge, host and none:
+  - bridge is the default network to which the containers are connected to automatically
+  - host is the network the container can use to connect directly to the host network, sacrificing security.
+- Using the --network when starting a container attaches it to the specified network.
+
+## Lesson 29: Docker Networks DNS
+- By default, the bridge network doesn't enable DNS, so if you wanted to connect between your containers in that network without relying on IP addresses, you would need to use the --link when starting the container.
+- It is a better practice to simply create a custom network and connect your containers there, because all custom networks have DNS enabled by default.
+
+## Lesson 31. Assignment. CLI App Testing
+1. Use different Linux distro containers to check `curl` cli tool version.
+2. Uso two different terminal windows to start `bash` in `centos:7` and `ubuntu:14.04` interactively.
+3. Use the `--rm` flag when running your containers so they are removed when stopped.
+4. Ensure `curl` is installed on latest version for that distro
+  - ubuntu: `apt-get update && apt-get install curl`
+  - centos: `yum update curl`
+5. Check `curl --version`
+
+```shell
+# Solution
+# In one terminal window
+docker container run --rm -it --name centos centos:7 bash
+yum update curl
+curl --version # curl 7.29.0
+
+# In other terminal window
+docker container run --rm -it --name ubuntu ubuntu:14.04 bash
+apt-get update && apt-get install curl
+curl --version # curl 7.35.0
+```
