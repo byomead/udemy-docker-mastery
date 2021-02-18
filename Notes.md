@@ -34,13 +34,20 @@
 6. Stop and remove the containers
 7. List the containers (they should be gone)
 
+### Solution
 ```shell
-# Solution
+# Create the containers
 docker container run -d -p 80:80 --name nginx-c nginx
 docker container run -d -p 8080:80 --name httpd-c httpd
 docker container run -d -p 3306:3306 --name mysql-c -e MYSQL_RANDOM_ROOT_PASSWORD=yes mysql
+
+# List the containers
 docker container ls
+
+# Display the logs of a container
 docker container logs mysql-c
+
+# Stop and remove a container
 docker container stop <containers> && docker container rm <containers>
 docker container ls
 ```
@@ -87,14 +94,14 @@ docker container ls
 ## Lesson 31. Assignment. CLI App Testing
 1. Use different Linux distro containers to check `curl` cli tool version.
 2. Uso two different terminal windows to start `bash` in `centos:7` and `ubuntu:14.04` interactively.
-3. Use the `--rm` flag when running your containers so they are removed when stopped.
+3. Use the `--rm` flag when running your containers so that they are removed when stopped.
 4. Ensure `curl` is installed on latest version for that distro
   - ubuntu: `apt-get update && apt-get install curl`
   - centos: `yum update curl`
 5. Check `curl --version`
 
+### Solution
 ```shell
-# Solution
 # In one terminal window
 docker container run --rm -it --name centos centos:7 bash
 yum update curl
@@ -104,4 +111,71 @@ curl --version # curl 7.29.0
 docker container run --rm -it --name ubuntu ubuntu:14.04 bash
 apt-get update && apt-get install curl
 curl --version # curl 7.35.0
+```
+
+## Lesson 34. Assignment. DNS Round Robin test
+DNS Round Robin refers to the technique of using multiple IP addresses and servers behind a single DNS name so that the service is always available. Basically, multiple hosts respond to the same DNS name.
+
+Since Docker Engine 1.11, we can assign an alias to a custom network so that multiple containers can respond to the same DNS address.
+
+1. Create a new virtual network with the default bridge driver.
+2. Create two containers from `elasticsearch:2` image. Remember to connect them to the custom network using `--network || --net`.
+3. Research and use `--network-alias || --net-alias search` when creating the containers to give them an additional DNS name to respond to.
+4. Use the `alpine` image to run `alpine nslookup search` to see the DNS addresses of the containers that respond to that DNS name. Connect the `alpine` container to the network.
+5. Run `centos curl -s search:9200` with `--net` flag multiple times until you see both containers show. What this does is that it makes a request to the `search` DNS name and since the containers use `elasticsearch`, the default port is `9200`, and the output will be the configuration for it. In that output, you should see the container that took the request and responded. Keep in mind that `elasticsearch` gives random names when it responds.
+
+### Solution
+```shell
+# Create virtual network
+docker network create elastic-network
+
+# Create elasticsearch containers
+docker container run --rm -d --network elastic-network --network-alias search --name elastic-one elasticsearch:2
+docker container run --rm -d --network elastic-network --network-alias search --name elastic-two elasticsearch:2
+
+# Create alpine container
+docker container run --rm -it --network elastic-network --name alpine alpine:3.10 /bin/sh
+nslookup search
+
+# Output
+# Name:      search
+# Address 1: 172.18.0.3 elastic-two.elastic-network
+# Address 2: 172.18.0.2 elastic-one.elastic-network
+
+# Create centos container
+docker container run --rm -it --network elastic-network --name centos centos:latest bash
+curl -s search:9200
+
+# Output of one container
+# {
+#   "name" : "Eliminator",
+#   "cluster_name" : "elasticsearch",
+#   "cluster_uuid" : "nP9P4sNpSNmtzyTaHq6jjg",
+#   "version" : {
+#     "number" : "2.4.6",
+#     "build_hash" : "5376dca9f70f3abef96a77f4bb22720ace8240fd",
+#     "build_timestamp" : "2017-07-18T12:17:44Z",
+#     "build_snapshot" : false,
+#     "lucene_version" : "5.5.4"
+#   },
+#   "tagline" : "You Know, for Search"
+# }
+
+# Output of second container
+# {
+#   "name" : "Rage",
+#   "cluster_name" : "elasticsearch",
+#   "cluster_uuid" : "zkgaGoAeRGihfck2S3Q2MQ",
+#   "version" : {
+#     "number" : "2.4.6",
+#     "build_hash" : "5376dca9f70f3abef96a77f4bb22720ace8240fd",
+#     "build_timestamp" : "2017-07-18T12:17:44Z",
+#     "build_snapshot" : false,
+#     "lucene_version" : "5.5.4"
+#   },
+#   "tagline" : "You Know, for Search"
+# }
+
+# Remove the elasticsearch containers
+docker container rm -f elastic-one elastic-two
 ```
