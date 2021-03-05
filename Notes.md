@@ -35,7 +35,7 @@
 7. List the containers (they should be gone)
 
 ### Solution
-```shell
+```sh
 # Create the containers
 docker container run -d -p 80:80 --name nginx-c nginx
 docker container run -d -p 8080:80 --name httpd-c httpd
@@ -101,7 +101,7 @@ docker container ls
 5. Check `curl --version`
 
 ### Solution
-```shell
+```sh
 # In one terminal window
 docker container run --rm -it --name centos centos:7 bash
 yum update curl
@@ -124,7 +124,7 @@ curl --version # curl 7.35.0
 5. Run `centos curl -s search:9200` with `--net` flag multiple times until you see both containers show. What this does is that it makes a request to the `search` DNS name and since the containers use `elasticsearch`, the default port is `9200`, and the output will be the configuration for it. In that output, you should see the container that took the request and responded. Keep in mind that `elasticsearch` gives random names when it responds.
 
 ### Solution
-```shell
+```sh
 # Create virtual network
 docker network create elastic-network
 
@@ -256,13 +256,13 @@ RUN apk add --update tini && mkdir -p /usr/src/app
 # Set directory to created app directory
 WORKDIR /usr/src/app
 
-# Copy package.json file into app directory
+# Copy package.json file into app directory as package.json
 COPY package.json package.json
 
 # Install dependencies
 RUN npm install && npm cache clean --force
 
-# Copy all from current dir to app dir in container
+# Copy all from current dir on host to current dir in container (image)
 COPY . .
 
 # Run container command
@@ -270,12 +270,12 @@ CMD ["/sbin/tini", "--", "node", "./bin/www"]
 ```
 2. Build the image from the Dockerfile.
 
-```shell
+```sh
 # Build image with tag and path to Dockerfile
 docker image build -t byomead/node-app:latest .
 
 # Run container
-docker container run -d -p 80:3000 --name node-app byomead/node-app:latest
+docker container run --rm -d -p 80:3000 --name node-app byomead/node-app:latest
 
 # Login to Docker Hub
 docker login
@@ -293,6 +293,33 @@ docker container rm -f [...CONTAINERS]
 docker image rmi byomead/node-app:latest
 
 # Run a new container from the image in the registry
-docker container run -d -p 80:3000 --name node-app byomead/node-app:latest
+docker container run --rm -d -p 80:3000 --name node-app byomead/node-app:latest
 # This should download the image and run the container
 ```
+
+## Lesson 45. Using `prune`
+- You can use `prune` command to clean up images, volumes, build cache and containers.
+- `docker image prune`: clean up "dangling" images. Add `-a` to remove all images not being used.
+- `docker system prune`: clean up everything.
+- `docker volume prune`: clean up unused volumes.
+
+## Lesson 46. Container lifetime & persisten data
+- Containers are meant to be **immutable** and **ephemeral**. Buzzwords for saying containers are not designed to change once deployed, they are temporary and disposable.
+- If some of the configuration or versioning or anything needs to be changed for a container, re-deploy it, and get rid of the previous one.
+- Since containers are disposable... what about when we use containers for databases, or when the app writes data into a file, or we need to keep unique data like key-value pairs?
+- There are two solutions: **Volumes** and **Bind Mounts**
+- **Volumes**: creates special location outside of container's UFS (*Union Filesystem*) to store unique data that is preserved across container removals and can be attached to any container created. Containers only see it as a local file path.
+- **Bind Mounts**: directly mount a host's directory or file into a container. The container will see it as a local path, and won't know it's from the host.
+
+## Lesson 47. Data Volumes
+- One way to give a **Volume** to a container is by using the `VOLUME` command in the Dockerfile.
+- `VOLUME [PATH]`. This command in Dockerfile will create a new volume location **on the host** and assign a path to it. Any data or files inside that path will *outlive* the container and be available until **manually** deleted.
+- The container will think that the path is the one you gave it in the command, but actually Docker creates a new path in the host and maps it to the path provided in the Dockerfile.
+- Volumes need to be manually deleted as an ensurance that the data will remain even after the containers that used it were stopped/removed.
+- You can also assign a volume when creating a container using the `-v [PATH]` flag.
+- By default, any volume created will be given a random id as name. This makes it hard to know which volume is for which container.
+- To solve that problem, named volumes come in. You cannot *name* a volume when assigning it with the Dockerfile, but you can when assigning the volume at the moment of creation for the container. You need to use the `-v [NAME]:[PATH]` flag. `NAME` being the name of the volume and `PATH`, well... the path. If the named volume already exists, it will use that one, if not, it will create a new one.
+- `docker volume create [NAME]`: create named volumes separately from a container. The only use case you might want to use this is to give special configuration to the volume, like a different driver.
+
+## Lesson 49. Bind Mounting
+LEFT HERE
