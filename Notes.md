@@ -319,7 +319,61 @@ docker container run --rm -d -p 80:3000 --name node-app byomead/node-app:latest
 - You can also assign a volume when creating a container using the `-v [PATH]` flag.
 - By default, any volume created will be given a random id as name. This makes it hard to know which volume is for which container.
 - To solve that problem, named volumes come in. You cannot *name* a volume when assigning it with the Dockerfile, but you can when assigning the volume at the moment of creation for the container. You need to use the `-v [NAME]:[PATH]` flag. `NAME` being the name of the volume and `PATH`, well... the path. If the named volume already exists, it will use that one, if not, it will create a new one.
+- When creating a container from an image that specifies its `VOLUME` path in its `Dockerfile` and you want to name it, you have to name the path specified in the Dockerfile, since that's the place the container will be looking for the volume.
 - `docker volume create [NAME]`: create named volumes separately from a container. The only use case you might want to use this is to give special configuration to the volume, like a different driver.
 
 ## Lesson 49. Bind Mounting
-LEFT HERE
+- **Bind Mounting** maps a *host* file or directory to a *container* file or directory.
+- Basically, it's just two locations pointing to the same file(s).
+- Since bind mounts need the files to actually exist in the hard drive of the host, and are host-specific, they cannot be used in `Dockerfile`, and must be declared when creating a container.
+- `... run -v /Users/user/stuff:/path/container` (mac/linux)
+- `... run -v //c/Users/user/stuff:/path/container` (windows)
+- This looks similar to when we make named volumes, but instead of a name, we provide a real path in the host.
+- They way Docker knows the difference between a named volume and a bind mount is that the bind mount always starts with `/`.
+- *Pro tip*: Use the `$(pwd)` command to specify the host path. This command returns the current working directory, so make sure to run the command inside the directory you want to map into the container.
+- Unless you specify the container to have **read-only** permissions over the host directory, the container can actually overwrite and delete files and directories in it, so be careful!
+
+## Lesson 50. Assignment: Named Volumes
+1. Create a `postgres` container with named volume `psql-data` using version `9.6.1`.
+2. Use Docker Hub to learn the `VOLUME` path of the image and the versions needed to run it.
+3. Check logs and check the named volume was created: `docker volume ls`.
+4. Stop the container.
+5. Create a new `postgres` container with the same named volume using `9.6.2`.
+6. Check logs to validate.
+
+### Solution
+```sh
+# Create postgres container with named volume (there is no longer version 9.6.1 in Docker Hub)
+# Look for VOLUME path in the Dockerfile
+docker container run -d --name postgres1 -v psql-data:/var/lib/postgresql/data postgres:9.6
+
+# Check volumes created
+docker volume ls
+
+# Stop container
+docker container rm -f postgres1
+
+# Create new postgres container with same named volume (there is no version 9.6.2 in Docker Hub)
+docker container run -d --name postgres2 -v psql-data:/var/lib/postgresql/data postgres:10.16
+
+# Check logs to validate
+docker container logs postgres2
+```
+
+## Lesson 52. Assignment. Edit code running in containers with bind mounts
+1. Use Jekyll (static site generator) to start a local web server.
+2. Source code is in `bindmount-sample-1`.
+3. Edit files on host.
+4. Container detects changes in host files and updates web server.
+5. `docker container run -p 80:4000 -v $(pwd):/site bretfisher/jekyll-serve`
+6. Refresh to see changes
+7. Change file in `_posts\` and refresh browser to see changes.
+
+### Solution
+```sh
+# Move to the bindmount-sample-1 directory
+cd bindmount-sample-1
+
+# Create Jekyll container
+docker container run -p 80:4000 -v $(pwd):/site bretfisher/jekyll-serve
+```
