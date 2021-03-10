@@ -377,3 +377,70 @@ cd bindmount-sample-1
 # Create Jekyll container
 docker container run -p 80:4000 -v $(pwd):/site bretfisher/jekyll-serve
 ```
+
+## Lesson 55. Docker Compose and docker-compose.yml file
+- It helps configure relationships between containers.
+- The `docker-compose.yml` file containes all the `docker container run` settings in an easy-to-read format, so you don't have to specify them each time you create a container. Things like volumes, ports, etc.
+- Creates one-liner developer environment setups. Get everything ready with a single command.
+- Docker Compose is comprised of 2 parts:
+  1. YAML-formatted file that describes:
+    - Containers
+    - Networks
+    - Volumes
+  2. CLI tool `docker-compose` used for local dev/test automation with the YAML file.
+- Keep in mind the YAML format has its own versions.
+- By default, `docker-compose` expects a `docker-compose.yml` filename, you any file can be used as long it is YAML with the `-f` flag.
+- As a recommendation, use YAML v2 minimum.
+- Remember: The `servicename` is the equivalent to the DNS name for the container in the network. It is like using the `--name` flag when creating the container.
+- If not defined, docker-compose will create a default network for the containers.
+- You only need to set up port mapping when you plan to connect the host with the container. You don't need to if the container is supposed to only talk to other containers in the network.
+
+## Lesson 56. Basic Compose commands
+- CLI tool comes with Docker for Windows/Mac, but separate for Linux.
+- Not a production-grade tool, but useful for local development and test.
+- `docker-compose up`: setup volumes/networks and start all containers.
+- `docker-compose down`: stop all containers and remove containers/volumes/networks.
+- `docker-compose logs`: show all the logs from the services (containers).
+- A lot of the commands found in the Docker CLI, can also be found in the docker-compose CLI. That's basically because docker-compose is like a new layer abstracting what the Docker CLI does.
+
+## Lesson 57. Build a Compose file for a multi-container service
+1. Build a basic compose file for a Drupal CMS website.
+2. Use `drupal` and `postgres` images.
+3. Use `ports`to expose Drupal on 8080.
+4. Use YAML v2.
+5. Set up `POSTGRES_PASSWORD` for postgres.
+6. Tip: Drupal assumes DB is `localhost`, but it should be the service name.
+7. Extra: use volumes to store Drupal unique data.
+
+### Solution
+```yml
+# specify version
+version: '2'
+
+# containers to be created
+services:
+  web:
+    image: drupal:8.9
+    ports:
+      - "8080:80"
+    volumes:
+      - drupal-modules:/var/www/html/modules
+      - drupal-profiles:/var/www/html/profiles
+      - drupal-sites:/var/www/html/sites
+      - drupal-themes:/var/www/html/themes
+    depends_on: 
+      - db
+  db:
+    image: postgres:12.6
+    environment:
+      - POSTGRES_DB=drupal
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=1234
+
+# named volumes
+volumes:
+  drupal-modules:
+  drupal-profiles:
+  drupal-sites:
+  drupal-themes:
+```
