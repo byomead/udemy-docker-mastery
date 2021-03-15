@@ -444,3 +444,92 @@ volumes:
   drupal-sites:
   drupal-themes:
 ```
+
+## Lesson 59. Adding image building to Docker Compose
+- Docker Compose can build custom images. But it will only build them if they are not found in the cache.
+- You can rebuild using `docker-compose build`, in case you needed to change the image.
+- `docker-compose down` does not remove built images unless a `--rmi` flag was provided.
+- Docker Compose creates all of its networks, cointainers and images using the current directory the command was run. 
+
+## Lesson 60. Assignment. Compose for run-time image building and multi-container
+1. Start with Compose file from previous assignment.
+2. Make a Dockerfile and Compose file in `compose-assignment-2`.
+3. Use the `drupal` and `postgres` image as before.
+4. Follow the instructions on the `README.md`.
+
+### Solution
+1. `Dockerfile`
+```Dockerfile
+# Base image
+FROM drupal:8
+
+# Install Git and cleanup apt install
+RUN apt-get update && apt-get install -y git \
+  && rm -rf /var/lib/apt/lists/*
+
+# Move to another dir
+WORKDIR /var/www/html/themes
+
+# Clone the drupal theme and set the default drupal user as owner of the filess
+RUN git clone --branch 8.x-3.x --single-branch --depth 1 https://git.drupalcode.org/project/bootstrap.git \
+  && chown -R www-data:www-data bootstrap
+
+# Change workdir to default
+WORKDIR /var/www/html
+```
+
+2. `docker-compose` file
+```yml
+# create your drupal and postgres config here, based off the last assignment
+version: '2'
+
+services:
+  drupal: # name of service (container)
+    build: . # build from Dockerfile in current dir
+    image: custom-drupal # name of image
+    ports:
+      - "8080:80"
+    volumes:
+      - drupal-modules:/var/www/html/modules
+      - drupal-profiles:/var/www/html/profiles
+      - drupal-sites:/var/www/html/sites
+      - drupal-themes:/var/www/html/themes
+    depends_on: 
+      - db
+  db:
+    image: postgres:12.6
+    environment:
+      - POSTGRES_DB=drupal
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=1234
+    volumes:
+      - drupal-data:/var/lib/postgresql/data
+
+volumes:
+  drupal-modules:
+  drupal-profiles:
+  drupal-sites:
+  drupal-themes:
+  drupal-data:
+```
+
+## Lesson 62. Swarm Mode: Built-In Orchestration
+- Swarm is a service clustering solution built inside Docker.
+- Not enabled by default. It would add new commands once enabled.
+- Swarm helps solve a lot of problems, like scalibility, container lifecycle, deployment and upgrade of containers without taking down the service, etc.
+- `docker service` helps solve the issue in which `docker run` only created one container at a time. With Swarm, we can create a *service* that would create one or more *tasks* (containers).
+
+## Lesson 63. Create your first service and scale it locally
+- `docker swarm init`: enables Swarm in Docker.
+- When enabling Swarm, a *leader* manager node is created. There can be only one leader at a time.
+- **TIP**: Service = Node.
+- While `docker run` helps us create individual containers that we can name. It is primarily used for local development. In the online production environment, we need to use a different solution, using `docker service`, which will orchestrate and create the necessary containers. Think of local dev as having a pet (and naming it), while a service as having a cattle (multiple unnamed).
+- `docker service create IMAGE COMMAND`: creates a new service based on the image provided. The output ID is the ID of the service, not a container. You can also name the service.
+- `docker service ps SERVICE_NAME/SERVICE_ID`: enlists the tasks (containers) inside that service.
+- `docker container ls` still works and can enlist the containers in a service, but you will see extra info for that container.
+- `docker service update SERVICE_NAME/SERVICE_ID [OPTIONS]`: change attributes about the service, like the number of replicas it has (number of tasks). This command also ensures that any necessary updates to be done to its containers will not make the online service unavailable. Swarm was designed with a mindset of *always* having the service available.
+- If you tried to delete a container inside a service (node), and quickly ran `docker service ls`, you would actually see in its `REPLICAS` column that a container is missing, but if you run it again, you will see that it is now there again. That's because Swarm rapidly replaced the deleted container.
+- `docker service rm SERVICE_NAME/SERVICE_ID`: remove the service and all the containers it created.
+
+## Lesson 66. Creating a 3-Node Swarm Cluster
+LEFT HERE
