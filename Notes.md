@@ -532,4 +532,12 @@ volumes:
 - `docker service rm SERVICE_NAME/SERVICE_ID`: remove the service and all the containers it created.
 
 ## Lesson 66. Creating a 3-Node Swarm Cluster
-LEFT HERE
+- You can use [this link](play-with-docker.com) to simulate the creation of multiple nodes, or use `docker-machine`.
+- Or use Droplets in Digital Ocean (costs money).
+- Once your 3 nodes are created (3 computers, or 3 Droplets or nodes in PlayWithDocker or whatever), you can create a `Docker Swarm` in one of them.
+- Since they are different computers, you will need to provide the IP address by which the node is accessible when creating the swarm: `docker swarm init --advertise-addr IP_ADDRESS`.
+- After creating the swarm, it will output a command to let other nodes join the swarm as workers. For example: `docker swarm join --token SWMTKN-1-5bz8t7wvep0dpdmqjbqrp3dvlog02ccno4ew7ksysqlno8au51-2enzike9ax1rjg0lw8aliz37q 192.168.0.13:2377`.
+- Only manager nodes have access to Swarm commands, since they have management privileges. You cannot use Swarm commands on worker nodes.
+- If you want to promote a node, go to a manager node and type: `docker node update --role manager NODE_NAME`.
+- To add a node as a manager by default, run: `docker swarm join-token manager` and it will output the token to join a node as manager.
+- You can operate the entire Swarm from one node, really.
