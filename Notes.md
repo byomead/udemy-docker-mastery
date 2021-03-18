@@ -73,6 +73,7 @@ docker container ls
 - Best practice is to create a new network for each app.
 - Network defaults work well, but are easily configurable.
 - Containers can be in 0 to several networks.
+- Networks and containers have a many-to-many relationship.
 - Only one container can listen to a host port at a time.
 - Any traffic from the outside of the host that goes to the port mapped by the container will arrive to the container.
 
@@ -522,9 +523,10 @@ volumes:
 ## Lesson 63. Create your first service and scale it locally
 - `docker swarm init`: enables Swarm in Docker.
 - When enabling Swarm, a *leader* manager node is created. There can be only one leader at a time.
-- **TIP**: Service = Node.
+- **TIP**: Task = Container. A Service can contain multiple nodes. A node contains the containers (tasks).
 - While `docker run` helps us create individual containers that we can name. It is primarily used for local development. In the online production environment, we need to use a different solution, using `docker service`, which will orchestrate and create the necessary containers. Think of local dev as having a pet (and naming it), while a service as having a cattle (multiple unnamed).
-- `docker service create IMAGE COMMAND`: creates a new service based on the image provided. The output ID is the ID of the service, not a container. You can also name the service.
+- `docker service create IMAGE COMMAND`: creates a new service based on the image provided. The output ID is the ID of the service, not a container. You can also name the service. It can take pretty much the same flags as `docker container run`.
+- You can use the `--replicas NUM_REPLICAS` flag when creating a service to creating a number of replicas of the container. Meaning it would create multiple containers for the same service.
 - `docker service ps SERVICE_NAME/SERVICE_ID`: enlists the tasks (containers) inside that service.
 - `docker container ls` still works and can enlist the containers in a service, but you will see extra info for that container.
 - `docker service update SERVICE_NAME/SERVICE_ID [OPTIONS]`: change attributes about the service, like the number of replicas it has (number of tasks). This command also ensures that any necessary updates to be done to its containers will not make the online service unavailable. Swarm was designed with a mindset of *always* having the service available.
@@ -541,3 +543,25 @@ volumes:
 - If you want to promote a node, go to a manager node and type: `docker node update --role manager NODE_NAME`.
 - To add a node as a manager by default, run: `docker swarm join-token manager` and it will output the token to join a node as manager.
 - You can operate the entire Swarm from one node, really.
+
+## Lesson 67. Scaling out with an Overlay network
+- Add `--drive overlay` when creating the network.
+- After creating the network, you will notice other two networks: `ingress` (for load balancing) and other with a weird name.
+- This network allows for communication between containers inside a single Swarm. This means, connecting between different nodes.
+- You can add IPSec encrypting to the communications as an options, but is oof by default for performance reasons.
+
+## Lesson 68. Scaling out with Routing Mesh.
+- The Routing Mesh routes ingress (incoming) packets for a service to the proper task (container/node).
+- Basically, it is a load balancer that comes out of the box that works on Layer 3 (IP and Ports).
+- Spans across all nodes.
+- It load balances across all the nodes and listening on all the nodes for traffic.
+- Works in two ways:
+  - From container to container in an Overlay network using VIP (Virtual IP). If a service has two replicas of the container that handles Backend, for example, a virtual and private IP is exposed in the network so the Frontend only needs to hit to that VIP, and it will re-route and balance between the replicas.
+  - External traffic incoming to published ports (all nodes listen). Once a node listens to the traffic, it will re-route it to the proper node and the proper task.
+
+## Lesson 69. Create a Multi-Service Multi-Node Web App
+- Using Docker's Distributed Voting App.
+- Check the `swarm-app-1` directory for the requirements.
+- 1 volume, 2 networks, and 5 services needed.
+- Create the commands needed, spin up services and test app.
+- Use Docker Hub images, never build images in your production Swarm.
