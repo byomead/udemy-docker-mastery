@@ -579,3 +579,59 @@ docker service create --name worker --network frontend --network backend dockers
 docker service create --name db --network backend --mount type=volume,source=psql-data,target=/var/lib/posstgresql/data postgres:9.4
 docker service create --name result --network backend -p 5001:80 dockersamples/examplevotingapp_result:before
 ```
+
+## Lesson 71. Swarm Stacks
+- Stacks are a new layer in Swarm in which you can create services, networks and volumes using Compose files.
+- `docker stack deploy -c STACK_FILE STACK_NAME`: is the equivalent to `docker service create`.
+- The Compose file now accepts a `deploy` command. `build` is ignored.
+- When building with a compose file that has a `deploy` command, it will be ignored. Just like Swarm ignores `build`. This means you can have a single compose file for development and production.
+- Remember, `docker-compose` is not a production tool, only for testing and development.
+- Stacks = multiple services, with volumes and overlay networks.
+- Stack file is very similar to a Compose file, and both have a YAML format.
+- Stack file needs to be at least version 3.
+- If you make any change to the Stack file, you only need to deploy it again, no `update` command.
+
+## Lesson 72. Secrets Storage for Swarm
+- Easiest secure solution for storing secrets in Swarm
+- Stores secrets like:
+  - Usernames and passwords
+  - TLS certificates and keys
+  - SSH keys
+  - Any data you don't want public
+- Supports strings and binary content
+- Doesn't require apps to be rewritten
+- Secrets are first stored in Swarm, and then assigned to a Service
+- Only Containers in an assigned Service can see them
+- Secrets are like key-value pairs, and are dependent on Swarm
+
+## Lesson 73. Secrets in Swarm Services
+- `docker secret create SECRET_NAME PATH_TO_VALUE` is how you create a secret. It reads the value to create as secret from a file in the host.
+- `echo "VALUE" | docker secret create SECRET_NAME -` Reads the value from the STDIO and creates the secret (that's the purpose of the `-`).
+- To add a secret to a Service, use the flag `--secret SECRET_NAME` when creating the service. After that, you can use the secret by giving environment variables to the service like `-e ENV_VARIABLE_FILE=/run/secrets/SECRET_NAME`. Notice the `_FILE` at the end of the variable, if it wasn't there, it would not work.
+- `docker service update --secret-rm`: removes secrets from the Service.
+- Every time you add or remove secrets, the containers in a Service get re-deployed.
+
+## Lesson 74. Secrets in Swarm Stacks
+- To use Secrets in Swarm Stacks, the Stack file must be at least version 3.1
+- Define a `secrets` section in the Stacks file, and then add the secrets to the services that need them.
+- `docker stack rm STACK_NAME` removes a Stack, including all secrets in it.
+
+```yml
+version: '3.1'
+
+services:
+  psql:
+    image: postgres
+    secrets:
+      - psql_user
+      - psql_password
+    environment:
+      - POSTGRES_PASSWORD_FILE: /run/secrets/psql_password
+      - POSTGRES_USER_FILE: /run/secrets/psql_user
+
+secrets:
+  psql_user:
+    file: ./psql_user.txt
+  psql_password:
+    file: ./psql_password.txt
+```
